@@ -1,30 +1,164 @@
 <!doctype html>
 <html class="no-js" lang="">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title>Fext</title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-    </head>
-    <body>
-     
-     <!--
-         Write a javascript function that will grab the JSON content from: 
-         https://api.fext.co/v1/users/937/history
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Fext - Statistics</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<!--
+    Write a javascript function that will grab the JSON content from:
+    https://api.fext.co/v1/users/937/history
 
-         Display it in an HTML table on this page. (You will need to create the table)
+    Display it in an HTML table on this page. (You will need to create the table)
 
-         The listing should show the date and the protein, carbs, fat, and calories consumed on that date as well as the percentage to daily target for each one. 
+    The listing should show the date and the protein, carbs, fat, and calories consumed on that date as well as the percentage to daily target for each one.
 
-         All of the data is available to you in the JSON response.
+    All of the data is available to you in the JSON response.
 
-         For this exercise, you do not need to factor in pagination
-     -->
+    For this exercise, you do not need to factor in pagination
+-->
+
+    <!--
+        Note: I didn't spend lots of time formatting the data
+
+        How this works:
+        1. Html table has been setup to display data properly
+        2. Some functions have been setup to help simplify the code
+        3. program starts with getJson, get's total JSON content from site
+        4. Once data has been retrieved, a start method is called that grabs nested JSONs and then gathers data from it
+        5. The title is set to '"Name" - Statistics'
+        6. All of the keys are retrieved and nested JSONs are gathered
+        7. All of the proper data is pulled from the nested JSONs in function displayStats
+        8. Data is appended to the table, results displayed, job completed
+    -->
+
+    <table style="width:100%">
+        <tr>
+            <th>Date</th>
+            <th>Total Protein</th>
+            <th>Total Carbs</th>
+            <th>Total Fat</th>
+            <th>Total Calories</th>
+            <th>Percentage Of Protein</th>
+            <th>Percentage Of Carbs</th>
+            <th>Percentage Of Fat</th>
+        </tr>
+        <tr>
+            <td><p id="date"></p></td>
+            <td><p id="protein"></p></td>
+            <td><p id="carbs"></p></td>
+            <td><p id="fat"></p></td>
+            <td><p id="calories"></p></td>
+            <td><p id="pop"></p></td>
+            <td><p id="poc"></p></td>
+            <td><p id="pof"></p></td>
+        </tr>
+    </table>
 
     <script>
-        //javascript here
+        function setElement(element, data) {
+            document.getElementById(element).innerHTML = data;
+        }
+
+        function getDataFromID(id) {
+            return document.getElementById(id).innerHTML;
+        }
+
+        function appendDataToID(id, data, append) {
+            var dataFromID = getDataFromID(id);
+            var newData = dataFromID + append + data;
+
+            setElement(id, newData);
+        }
+
+        function format(str) {
+            return str
+                .replace(/"?/g, '');
+        }
+
+        function getJson(url) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true); //Open get request to url
+            xhr.setRequestHeader("Content-type", "application/json"); //set header
+            xhr.onreadystatechange = function() { //request is ready
+                if (xhr.readyState === 4 && xhr.status === 200) { //should be ready
+                    var data = xhr.responseText;
+
+                    //Start the process with gathered JSON
+                    start(data);
+                }
+            };
+
+            xhr.send(); //send request
+        }
+
+        function start(data) {
+            //Parse JSON, -> array
+            var json = JSON.parse(data);
+
+            //Getting all major nested JSONs
+            var userData = JSON.parse(JSON.stringify(json['data']['user']));
+            var daysData = JSON.parse(JSON.stringify(json['data']['days']));
+            var historyData = JSON.parse(JSON.stringify(json['data']['history']));
+
+            //Begin process of setting the title, gathering data
+            var firstname = format(JSON.stringify(userData['firstName']));
+            var lastname = format(JSON.stringify(userData['lastName']));
+            var fullname = firstname + " " + lastname;
+
+            //Setting the title
+            document.title = fullname + " - Statistics";
+
+            //Loop through every instance of the days JSON
+            for(var item in daysData) {
+                //Checks if item has property
+                if(daysData.hasOwnProperty(item)) {
+                    //Getting keys JSON, getting individual keys
+                    var keyData = JSON.parse(JSON.stringify(daysData[item]));
+                    var key = format(JSON.stringify(keyData['key']));
+
+                    //JSON from history, all data needing to be displayed is stored here
+                    var displayJson = JSON.stringify(historyData[key]);
+                    displayStats(displayJson);
+                }
+            }
+        }
+
+        function displayStats(stringedJson) {
+            //This is the final major function, gets data from final nested JSONs and appends it to table
+
+            //Get all data
+            var json = JSON.parse(stringedJson);
+            var totalData = JSON.parse(JSON.stringify(json['totals']));
+            var percentData = JSON.parse(JSON.stringify(json['percents']));
+
+            var totalCarbs = JSON.stringify(totalData['carbs']);
+            var totalProtein = JSON.stringify(totalData['protein']);
+            var totalFat = JSON.stringify(totalData['fat']);
+            var totalCalories = JSON.stringify(totalData['calories']);
+
+            var percentageCarbs = JSON.stringify(percentData['carbs']);
+            var percentageProtein = JSON.stringify(percentData['protein']);
+            var percentageFat = JSON.stringify(percentData['fat']);
+
+            var date = JSON.stringify(json['formatted_eaten_at']);
+
+            //Appending data to paragraph elements, final piece
+            appendDataToID('carbs', totalCarbs, '<br>');
+            appendDataToID('protein', totalProtein, '<br>');
+            appendDataToID('fat', totalFat, '<br>');
+            appendDataToID('calories', totalCalories, '<br>');
+            appendDataToID('poc', percentageCarbs + "%", '<br>');
+            appendDataToID('pof', percentageFat + "%", '<br>');
+            appendDataToID('pop', percentageProtein + "%", '<br>');
+            appendDataToID('date', format(date), '<br>');
+        }
+
+        getJson('https://api.fext.co/v1/users/937/history');
     </script>
 
-    </body>
+</body>
 </html>
